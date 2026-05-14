@@ -33,11 +33,6 @@ public class TobBankWallFix extends Plugin {
         reloadMap();
     }
 
-    @Override
-    protected void shutDown() throws Exception {
-        reloadMap();
-    }
-
     @Subscribe
     public void onGameStateChanged(GameStateChanged event) {
         if (event.getGameState() == GameState.LOGGING_IN) {
@@ -94,7 +89,7 @@ public class TobBankWallFix extends Plugin {
                 Scene scene = view.getScene();
                 Tile[][][] tiles = scene.getExtendedTiles();
 
-                for (int plane = 0; plane < 4; plane++) {
+                for (int plane = 1; plane <= 3; plane++) {
                     Tile tile = tiles[plane][x][y];
                     if (tile == null) continue;
                     WallObject wallObject = tile.getWallObject();
