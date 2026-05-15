@@ -1,9 +1,9 @@
 package com.tob_bank_wall_fix;
 
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.events.*;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.callback.RenderCallbackManager;
@@ -14,7 +14,6 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
 import javax.inject.Inject;
-import java.util.List;
 
 @Slf4j
 @PluginDescriptor(
@@ -26,14 +25,6 @@ public class TobBankWallFix extends Plugin {
 
     public static final int[] TOB_TOP_LEFT = {3631, 3198};
     public static final int[] TOB_BOTTOM_RIGHT = {3698, 3240};
-
-    private static final List<MenuAction> OBJECT_MENU_TYPES = ImmutableList.of(
-            MenuAction.GAME_OBJECT_FIRST_OPTION,
-            MenuAction.GAME_OBJECT_SECOND_OPTION,
-            MenuAction.GAME_OBJECT_THIRD_OPTION,
-            MenuAction.GAME_OBJECT_FOURTH_OPTION,
-            MenuAction.GAME_OBJECT_FIFTH_OPTION
-    );
 
     @Inject
     private Client client;
@@ -71,6 +62,9 @@ public class TobBankWallFix extends Plugin {
         if (event.getGameState() == GameState.LOGGING_IN) {
             loggingIn = true;
         }
+        if (event.getGameState() == GameState.LOGGED_IN) {
+            removeUpperFloors();
+        }
     }
 
     // Forces a map load to show/hide objects
@@ -95,6 +89,33 @@ public class TobBankWallFix extends Plugin {
     public void onConfigChanged(ConfigChanged e) {
         if (e.getGroup().equals("tobBankWallFix")) {
             reloadMap();
+        }
+    }
+
+    private void removeUpperFloors() {
+        Scene scene = client.getTopLevelWorldView().getScene();
+        Tile[][][] tiles = scene.getTiles();
+
+        for (int x = TOB_TOP_LEFT[0]; x < TOB_BOTTOM_RIGHT[0]; x++) {
+            for (int y = TOB_TOP_LEFT[1]; y < TOB_BOTTOM_RIGHT[1]; y++) {
+                LocalPoint p = LocalPoint.fromWorld(scene, x, y);
+                if (p == null) continue;
+                final int px = p.getSceneX();
+                final int py = p.getSceneY();
+                Tile tile1 = tiles[1][px][py];
+                Tile tile2 = tiles[2][px][py];
+                Tile tile3 = tiles[3][px][py];
+
+                if (tile1 != null)
+                    scene.removeTile(tile1);
+
+                if (tile2 != null)
+                    scene.removeTile(tile2);
+
+                if (tile3 != null)
+                    scene.removeTile(tile3);
+
+            }
         }
     }
 
