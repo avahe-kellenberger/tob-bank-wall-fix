@@ -1,11 +1,15 @@
 package com.tob_bank_wall_fix;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.callback.RenderCallbackManager;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
@@ -20,16 +24,45 @@ import java.util.List;
 )
 public class TobBankWallFix extends Plugin {
 
+    public static final int[] TOB_TOP_LEFT = {3631, 3198};
+    public static final int[] TOB_BOTTOM_RIGHT = {3698, 3240};
+
+    private static final List<MenuAction> OBJECT_MENU_TYPES = ImmutableList.of(
+            MenuAction.GAME_OBJECT_FIRST_OPTION,
+            MenuAction.GAME_OBJECT_SECOND_OPTION,
+            MenuAction.GAME_OBJECT_THIRD_OPTION,
+            MenuAction.GAME_OBJECT_FOURTH_OPTION,
+            MenuAction.GAME_OBJECT_FIFTH_OPTION
+    );
+
     @Inject
     private Client client;
 
     @Inject
     private ClientThread clientThread;
 
+    @Inject
+    private RenderCallbackManager renderCallbackManager;
+
+    @Inject
+    private ObjectHider hider;
+
     private boolean loggingIn = false;
+
+    @Provides
+    TobBankWallFixConfig provideConfig(ConfigManager configManager) {
+        return configManager.getConfig(TobBankWallFixConfig.class);
+    }
 
     @Override
     protected void startUp() throws Exception {
+        renderCallbackManager.register(hider);
+        reloadMap();
+    }
+
+    @Override
+    protected void shutDown() throws Exception {
+        renderCallbackManager.unregister(hider);
         reloadMap();
     }
 
@@ -50,14 +83,6 @@ public class TobBankWallFix extends Plugin {
         });
     }
 
-    private static final List<MenuAction> OBJECT_MENU_TYPES = ImmutableList.of(
-            MenuAction.GAME_OBJECT_FIRST_OPTION,
-            MenuAction.GAME_OBJECT_SECOND_OPTION,
-            MenuAction.GAME_OBJECT_THIRD_OPTION,
-            MenuAction.GAME_OBJECT_FOURTH_OPTION,
-            MenuAction.GAME_OBJECT_FIFTH_OPTION
-    );
-
     @Subscribe
     public void onGameTick(GameTick event) {
         if (loggingIn) {
@@ -67,40 +92,9 @@ public class TobBankWallFix extends Plugin {
     }
 
     @Subscribe
-    public void onClientTick(ClientTick tick) {
-        if (client.isMenuOpen()) {
-            return;
-        }
-
-        for (MenuEntry menuEntry : client.getMenu().getMenuEntries()) {
-            MenuAction type = menuEntry.getType();
-
-            // Check if this is an object interaction (including walls)
-            if (OBJECT_MENU_TYPES.contains(type)) {
-                int x = menuEntry.getParam0();
-                int y = menuEntry.getParam1();
-                int id = menuEntry.getIdentifier();
-
-                // Adjust coordinates for extended scene
-                x += (Constants.EXTENDED_SCENE_SIZE - Constants.SCENE_SIZE) / 2;
-                y += (Constants.EXTENDED_SCENE_SIZE - Constants.SCENE_SIZE) / 2;
-
-                WorldView view = client.getTopLevelWorldView();
-                Scene scene = view.getScene();
-                Tile[][][] tiles = scene.getExtendedTiles();
-
-                for (int plane = 1; plane <= 3; plane++) {
-                    Tile tile = tiles[plane][x][y];
-                    if (tile == null) continue;
-                    WallObject wallObject = tile.getWallObject();
-                    if (wallObject != null && wallObject.getId() == id) {
-                        if (wallObject.getPlane() > view.getPlane()) {
-                            menuEntry.setDeprioritized(true);
-                        }
-                        break;
-                    }
-                }
-            }
+    public void onConfigChanged(ConfigChanged e) {
+        if (e.getGroup().equals("tobBankWallFix")) {
+            reloadMap();
         }
     }
 
