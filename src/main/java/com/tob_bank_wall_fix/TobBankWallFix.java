@@ -39,6 +39,7 @@ public class TobBankWallFix extends Plugin {
     private ObjectHider hider;
 
     private boolean loggingIn = false;
+    private boolean deferredReload = false;
 
     @Provides
     TobBankWallFixConfig provideConfig(ConfigManager configManager) {
@@ -59,11 +60,16 @@ public class TobBankWallFix extends Plugin {
 
     @Subscribe
     public void onGameStateChanged(GameStateChanged event) {
-        if (event.getGameState() == GameState.LOGGING_IN) {
-            loggingIn = true;
-        }
-        if (event.getGameState() == GameState.LOGGED_IN) {
-            removeUpperFloors();
+        switch (event.getGameState()) {
+            case LOGGING_IN:
+                loggingIn = true;
+                break;
+            case LOGGED_IN:
+                removeUpperFloors();
+                break;
+            case LOADING:
+                deferredReload = true;
+                break;
         }
     }
 
@@ -73,6 +79,7 @@ public class TobBankWallFix extends Plugin {
         {
             if (client.getGameState() == GameState.LOGGED_IN) {
                 client.setGameState(GameState.LOADING);
+                deferredReload = false;
             }
         });
     }
@@ -81,6 +88,9 @@ public class TobBankWallFix extends Plugin {
     public void onGameTick(GameTick event) {
         if (loggingIn) {
             loggingIn = false;
+            reloadMap();
+        }
+        if (deferredReload) {
             reloadMap();
         }
     }
