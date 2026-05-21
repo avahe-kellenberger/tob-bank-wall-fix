@@ -4,6 +4,7 @@ import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.callback.RenderCallbackManager;
@@ -68,7 +69,13 @@ public class TobBankWallFix extends Plugin {
                 removeUpperFloors();
                 break;
             case LOADING:
-                deferredReload = true;
+                final WorldPoint loc = client.getLocalPlayer().getWorldLocation();
+                if (loc.getX() >= TOB_TOP_LEFT[0] && loc.getX() <= TOB_BOTTOM_RIGHT[0]) {
+                    if (loc.getY() >= TOB_TOP_LEFT[1] && loc.getY() <= TOB_BOTTOM_RIGHT[1]) {
+                        // Player is in the ToB area, need to reload
+                        deferredReload = true;
+                    }
+                }
                 break;
         }
     }
